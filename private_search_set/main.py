@@ -153,10 +153,10 @@ class PrivateSearchSet:
         if self.key_storage != None:
             return self.key_storage
 
-    def ingest_stdin(self, debug):
+    def ingest_stdin(self, bf, debug):
         # Read bytes from stdin  
         for line in sys.stdin.buffer.read().splitlines():  
-            self.ingest(line, debug)
+            self.ingest(line, bf, debug)
   
     def query_generator(self, data):
         if self.version == 1:
@@ -176,19 +176,28 @@ class PrivateSearchSet:
             return hashed_string
         return
 
-    def ingest(self, data, debug):
+    def ingest(self, data, bf, debug):
         hashed_string = self.query_generator(data)
         hashed_bytes = hashed_string.encode()
 
         # add the string digest to the private search set
         if debug:
             print(f"Ingesting in private search set: {hashed_string}")
-        self._ps.add(hashed_string)
+        # check hashset in priority if available
+        notKnown = False
+        if self._bf != None and not self._bf.check(hashed_bytes):
+          notKnown = True
+        if self._ps != None and not bf:
+            if notKnown:
+                self._ps.add(hashed_string)
+            elif not hashed_string in self._ps:
+                self._ps.add(hashed_string)
         # add the utf8 encoded bytes representation of the hexdigest to the bloom filter
         if self.bloomfilter['format'] == 'dcso-v1':
             if debug:
                 print(f"Ingesting in bloom filter:     {hashed_bytes}")
-            self._bf.add(hashed_bytes)
+            if notKnown:
+                self._bf.add(hashed_bytes)
 
     def check_stdin(self, bf, debug):
         # Read bytes from stdin  
