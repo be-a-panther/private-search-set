@@ -20,7 +20,7 @@ def check_stdin(ctx):
 @click.option('--json-file', required=False, type=click.Path(exists=True), help='Path to the PSS JSON file.')
 @click.option('--ingest/--check', required=True, type=click.BOOL , help='ingest or check stdin into/against PSS files')
 @click.option('--bf', required=False, is_flag=True, default=False, help='force check against the bloom filter over the hashset')
-@click.option('--key', required=False, type=click.STRING , help='specify key content for HMAC operations')
+@click.option('--password', required=False, type=click.STRING , help='specify password for HMAC operations')
 @click.option('--debug/--no-debug', default=False, help='print debug information')
 @click.pass_context
 def cli(ctx, json_file, pss_home, ingest, key, bf, debug):

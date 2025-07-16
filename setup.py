@@ -8,6 +8,7 @@ setup(
         "flor",
         "click",
         "hashlib",
+        "uuid-utils",
     ],
     entry_points='''
         [console_scripts]

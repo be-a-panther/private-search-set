@@ -54,12 +54,12 @@ flowchart TD
 |`description`|`string`|Human readable description of the set.|&check;|
 |`generated-timestamp`|`number`|Generation timestamp in epoch format. |&check;|
 |`algorithm`|`string`|Keyed-hash message authentication. Available:<br/> - Blake2b<br/> - Blake3<br/> - HMAC-SHA-256<br /> - HMAC-SHA-512  |&check;|
-|`keyid`|`string`|The reference to the key used in the keyed-hash message authentication algorithm. If the default value is used, then the private shared key `infected`.|&check;|
+|`keyid`|`string`|A UUID for getting the key which is used in the keyed-hash message authentication algorithm. If the default value is used, then the pre-known key`infected` is used.<br/> - UUIDv7 as Salt<br/> - UUIDv8 for application specific keyid|&check;|
 |`filter`|`hash`|The filter description along with its type, format and model.|&check;|
 |`misp-attribute-types`|`array`|Array of `string` with the types covered by the private search set. Types can be any from types [mentioned in the default MISP types](https://www.circl.lu/doc/misp/categories-and-types/#types). If not specified, `text` type is covered.|-|
 |`misp-object-template`|`array`|Array of `string` with the object template name and the version separated with a semicolon such as `person:19`.|-|
 |`canonicalization-format`|`string`|Meta function used expressed in Python functions. Such as `lower()[:10]`|-|
-|`openpgp-encrypted-key`|`string`|Base64 OpenPGP message encrypting the reference `keyid`. This is optional as the key can be distributed in different means such as dedicated MISP API key or other secure channel.|-|
+|`key-storage`|`string`|Base64 message storing the key in combination with the `keyid`. This is optional as the key can be distributed in different means such as dedicated MISP API key or other secure channel.|-|
 
 ### Meta format `format`
 
@@ -82,7 +82,7 @@ flowchart TD
 #### Format type `misp-feed-cache`
 
 ### Sample 
-
+A non-formal sample:
 ~~~~json
 {
   "algorithm": "Blake2",
@@ -112,6 +112,43 @@ flowchart TD
 
 ~~~~
 
+A minimal version 1:
+~~~~json
+{
+  "algorithm": "Blake2",
+  "bloomfilter": {
+    "capacity": 10000,
+    "format": "dcso-v1",
+    "fp-probability": 0.001
+  },
+  "canonicalization_format": null,
+  "description": "template",
+  "generated_timestamp": 1748271567,
+  "keyid": "deadbeef0xff",
+  "misp_attribute_types": null,
+  "version": 1
+}
+~~~~
+
+A minimal version 2:
+~~~~json
+{
+  "algorithm": "blake2b",
+  "bloomfilter": {
+    "capacity": 100000,
+    "format": "dcso-v1",
+    "fp-probability": 0.001
+  },
+  "canonicalization_format": null,
+  "description": "template",
+  "generated_timestamp": 1748271567,
+  "keyid": "01970d1b-1098-72e2-a514-1ded101bb7c7",
+  "key_storage": "aW5mZWN0ZWQK",
+  "misp_attribute_types": null,
+  "version": 2
+}
+
+~~~~
 ### Feed format
 
 The feed format is composed of a directory with the following structure:
