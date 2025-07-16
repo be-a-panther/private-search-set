@@ -7,7 +7,6 @@ setup(
     install_requires=[
         "flor",
         "click",
-        "hashlib",
         "uuid-utils",
     ],
     entry_points='''

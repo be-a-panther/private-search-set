@@ -19,7 +19,7 @@ Options:
   --json-file PATH      Path to the PSS JSON file.
   --ingest / --check    ingest or check stdin into/against PSS files[required]
   --bf                  force check against the bloom filter over the hashset
-  --key TEXT            specify key content for HMAC operations
+  --password TEXT       specify password for HMAC operations
   --debug / --no-debug  print debug information
   --help                Show this message and exit.
 
@@ -30,7 +30,7 @@ To create and populate a PSS in a directory (e.g., output), use:
 ```sh
 cat tests/word_list.txt | private-search-set --pss-home=output  --ingest --json-file=pss.json
 ```
-(here we use the json metadata sample as `pss.json`)
+(here we use the json metadata `pss.json` as a kind of template)
 
 ## Checking Data
 To check data against the hashset with `--check`:

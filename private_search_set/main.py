@@ -1,6 +1,7 @@
 import json 
 import os
 import sys
+import time
 import hashlib
 import base64
 #import uuid #uuidv7 since 3.14
@@ -20,22 +21,28 @@ class PrivateSearchSet:
         self.bloomfilter = bloomfilter
         self.canonicalization_format = canonicalization_format
         self.description = description
-        self.generated_timestamp = int(generated_timestamp)
+        if generated_timestamp is None:
+            self.generated_timestamp = int(time.time())
+        else:
+            self.generated_timestamp = int(generated_timestamp)
         if version == 1:
             self.keyid = keyid
         elif version == 2:
             if keyid is None:
                 self.keyid = uuid.uuid7(self.generated_timestamp)
-                if key_storage is None:
-                    self.key_storage = 'infected'
-                else:
-                    self.key_storage = key_storage
             else:
                 try:
                     self.keyid = uuid.UUID(str(keyid))
                 except:
                     raise ValueError("UUID not decodable: ", keyid)
-                self.key_storage = key_storage
+            if key_storage is None:
+                self.key_storage = 'infected'
+            else:
+                try:
+                    self.key_storage = base64.b64decode(key_storage).decode()
+                except:
+                    raise ValueError("Base64 not decodable: ", key_storage)
+
         self.misp_attribute_types = misp_attribute_types
         self.version = version
 
@@ -55,6 +62,7 @@ class PrivateSearchSet:
         if hasattr(private_search_set, 'key_storage'):
             print("Key storage:", private_search_set.key_storage)
 
+    # FYI: the key is the user provided passwort from cli
     def load_from_json_specs(json_file, key, debug):
         with open(json_file) as file:
             json_data = json.load(file)
@@ -62,10 +70,13 @@ class PrivateSearchSet:
             pss = PrivateSearchSet(**data)  # Create an instance of the PrivateSearchSet class
         if set(data.keys()) == set(pss.__dict__.keys()):
             pss.init_filter_and_set()
-            if pss.version == 1:
-                pss.init_key(data['keyid'])
-            elif pss.version == 2:
-                pss.init_key(data['key_storage'])
+            if key is None:
+                if pss.version == 1:
+                    pss.init_key(data['keyid'])
+                elif pss.version == 2:
+                    pss.init_key(data['key_storage'])
+            else:
+                pss.init_key(key)
             if debug:
                 PrivateSearchSet.print_private_search_set(pss)
             return pss
@@ -119,19 +130,18 @@ class PrivateSearchSet:
                 self.set_key(key)
         elif self.version == 2:
             try:
-                self.key_storage = base64.b64decode(self.key_storage).decode()
-            except:
-                raise ValueError("Base64 not decodable: ", self.key_storage)
-            tmp = ''
-            try:
                tmp = uuid.UUID(str(self.keyid))
             except:
                 raise ValueError("UUID not decodable: ", self.keyid)
             else:
                 if tmp.version == 7:
-                    self.set_key(hashlib.scrypt(password=self.key_storage.encode(), salt=self.keyid.node.to_bytes(16), n=2048, r=8, p=1))
+                    if key is None:
+                        password='infected'.encode()
+                    else:
+                        password=key.encode()
+                    self.set_key(hashlib.scrypt(password=password, salt=self.keyid.node.to_bytes(16), n=2048, r=8, p=1))
                 elif tmp.version == 8:
-                    self._key = self.key_storage
+                    self.set_key(key)
                     # possible place to call resolve_keyid function
                 else:
                     raise ValueError("UUID not usuable")
@@ -149,7 +159,6 @@ class PrivateSearchSet:
             self.ingest(line, debug)
   
     def query_generator(self, data):
-        hashed_string = ''
         if self.version == 1:
             if self.algorithm == 'Blake2':
                  hashed_string = hashlib.blake2b(data, key=self._key.encode()).hexdigest()
@@ -224,7 +233,8 @@ class PrivateSearchSet:
         file_path = os.path.join(pss_home, 'private-search-set.json')
         with open(file_path, 'w') as f:
             export = {k: v for k, v in self.__dict__.items() if k.startswith('_') != True}
-            export['key_storage'] = base64.b64encode(self.key_storage.encode()).decode('utf-8')
+            if self.version == 2:
+                export['key_storage'] = base64.b64encode(self.key_storage.encode()).decode('utf-8')
             f.write(json.dumps(export, cls=UUIDEncoder))
         # Write the private search file
         file_path = os.path.join(pss_home, 'private-search-set.pss')

@@ -23,12 +23,12 @@ def check_stdin(ctx):
 @click.option('--password', required=False, type=click.STRING , help='specify password for HMAC operations')
 @click.option('--debug/--no-debug', default=False, help='print debug information')
 @click.pass_context
-def cli(ctx, json_file, pss_home, ingest, key, bf, debug):
+def cli(ctx, json_file, pss_home, ingest, password, bf, debug):
     # If a json-file with PSS metadata is provided, load the PSS from the JSON file
     # set the key if provided
     if json_file:
         try:
-            ctx.obj = PrivateSearchSet.load_from_json_specs(json_file, key, debug)
+            ctx.obj = PrivateSearchSet.load_from_json_specs(json_file, password, debug)
         except ValueError as e:
             click.echo(e)
             exit(1)
@@ -36,7 +36,7 @@ def cli(ctx, json_file, pss_home, ingest, key, bf, debug):
     # set the key if provided
     elif pss_home:
         try:
-            ctx.obj = PrivateSearchSet.load_from_pss_home(pss_home, key, debug)
+            ctx.obj = PrivateSearchSet.load_from_pss_home(pss_home, password, debug)
         except ValueError as e:
             click.echo(e)
             exit(1)

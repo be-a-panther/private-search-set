@@ -1,0 +1,1 @@
+{"algorithm": "Blake2", "bloomfilter": {"capacity": 100000, "format": "dcso-v1", "fp-probability": 0.001}, "canonicalization_format": null, "description": "template", "generated_timestamp": 1748271567, "keyid": "deadbeef0xff", "misp_attribute_types": null, "version": 1}
