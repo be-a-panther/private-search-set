@@ -14,7 +14,7 @@ class BloomFilterBase(ABC):
 
     @abstractmethod
     def check(self, data):
-        """Load a Bloom filter from file."""
+        """check a single dataset against the Bloom filter."""
         pass
 
     @abstractmethod

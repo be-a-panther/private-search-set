@@ -55,14 +55,18 @@ flowchart TD
 |`generated-timestamp`|`number`|Generation timestamp in epoch format. |&check;|
 |`algorithm`|`string`|Keyed-hash message authentication. Available:<br/> - Blake2b<br/> - Blake3<br/> - HMAC-SHA-256<br /> - HMAC-SHA-512  |&check;|
 |`keyid`|`string`|A UUID for getting the key which is used in the keyed-hash message authentication algorithm. If the default value is used, then the pre-known key`infected` is used.<br/> - UUIDv7 as Salt<br/> - UUIDv8 for application specific keyid|&check;|
-|`filter`|`hash`|The filter description along with its type, format and model.|?|
+|`filters`|`array`|An array containing the filters. Currently limit to single entry|&check;|
 |`misp-attribute-types`|`array`|Array of `string` with the types covered by the private search set. Types can be any from types [mentioned in the default MISP types](https://www.circl.lu/doc/misp/categories-and-types/#types). If not specified, `text` type is covered.|-|
 |`misp-object-template`|`array`|Array of `string` with the object template name and the version separated with a semicolon such as `person:19`.|-|
 |`canonicalization-format`|`string`|Meta function used expressed in Python functions. Such as `lower()[:10]`|-|
 |`key-storage`|`string`|Base64 message storing the key in combination with the `keyid`. This is optional as the key can be distributed in different means such as dedicated MISP API key or other secure channel.|-|
 
-### Meta format `format`
+### Meta format `filters`
 
+A list of filters types. At the moment only two types of filter are defined:
+- bloomfilter
+- misp-feed-cache
+And only the `bloomfilter` format type is implemented. Within this two different implementations are recognized, those are the `format` fields within the format type.
 #### Format type `bloomfilter`
 
 |Key name|Type|Description|Required|
@@ -134,11 +138,12 @@ A minimal version 2:
 ~~~~json
 {
   "algorithm": "blake2b",
+  "filters": {
   "bloomfilter": {
     "capacity": 100000,
     "format": "dcso-v1",
     "fp-probability": 0.001
-  },
+  } },
   "canonicalization_format": null,
   "description": "template",
   "generated_timestamp": 1748271567,

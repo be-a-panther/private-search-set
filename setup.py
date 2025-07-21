@@ -8,6 +8,8 @@ setup(
         "flor",
         "click",
         "uuid-utils",
+        "poppy-py",
+        "blake3"
     ],
     entry_points='''
         [console_scripts]
