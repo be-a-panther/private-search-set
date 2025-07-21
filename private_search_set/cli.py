@@ -7,7 +7,7 @@ from private_search_set.main import PrivateSearchSet
 def ingest_stdin(ctx):
     pss = ctx.obj
     click.echo("Ingesting stdin to PSS file.")
-    pss.ingest_stdin(ctx.params["debug"])
+    pss.ingest_stdin(ctx.params["bf"], ctx.params["debug"])
     pss.write_to_files(ctx.params["pss_home"])
 
 @click.pass_context
