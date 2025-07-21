@@ -6,6 +6,7 @@ import hashlib
 import base64
 #import uuid #uuidv7 since 3.14
 import uuid_utils as uuid
+from blake3 import blake3 
 from private_search_set.bloom_filter_dcso import BloomFilterDCSO
 
 class UUIDEncoder(json.JSONEncoder):
@@ -171,6 +172,9 @@ class PrivateSearchSet:
                     key=self._key[0:63], \
                     salt=self._key[64:79], \
                     person=self._key[80:95]).hexdigest()
+            elif self.algorithm == 'blake3':
+                hashed_string = blake3(data,\
+                        key=self._key[0:32]).hexdigest()
             else:
               raise ValueError("HMAC algorithm not supported.")
             return hashed_string
