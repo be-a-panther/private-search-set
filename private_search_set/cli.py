@@ -8,7 +8,7 @@ def ingest_stdin(ctx):
     pss = ctx.obj
     click.echo("Ingesting stdin to PSS file.")
     pss.ingest_stdin(ctx.params["bf"], ctx.params["debug"])
-    pss.write_to_files(ctx.params["pss_home"])
+    pss.write_to_files(ctx.params["pss_home"], ctx.params["bf"])
 
 @click.pass_context
 def check_stdin(ctx):

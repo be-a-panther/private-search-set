@@ -32,6 +32,7 @@ class PrivateSearchSet:
         self.description = description
         if generated_timestamp is None:
             self.generated_timestamp = int(time.time())
+            print("WARN: new timestamp")
         else:
             self.generated_timestamp = int(generated_timestamp)
         if version == 1:
@@ -273,7 +274,7 @@ class PrivateSearchSet:
                 raise ValueError("Bloomfilter format not supported.")
  
         
-    def write_to_files(self, pss_home):
+    def write_to_files(self, pss_home, bfonly = False):
         if not os.path.exists(pss_home):
             os.makedirs(pss_home)
         # Write the bloom filter
@@ -290,8 +291,9 @@ class PrivateSearchSet:
             if self.version == 2:
                 export['key_storage'] = base64.b64encode(self.key_storage.encode()).decode('utf-8')
             f.write(json.dumps(export, cls=UUIDEncoder))
-        # Write the private search file
-        file_path = os.path.join(pss_home, 'private-search-set.pss')
-        with open(file_path, 'w') as f:
-            for ps in self._ps:
-                f.write(f"{ps}\n")
+        if not bfonly:
+            # Write the private search file
+            file_path = os.path.join(pss_home, 'private-search-set.pss')
+            with open(file_path, 'w') as f:
+                for ps in self._ps:
+                    f.write(f"{ps}\n")
