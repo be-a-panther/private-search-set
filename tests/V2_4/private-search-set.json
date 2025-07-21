@@ -1,0 +1,1 @@
+{"algorithm": "hmac-sha256", "bloomfilter": {"capacity": 100000, "format": "dcso-v1", "fp-probability": 0.001}, "canonicalization_format": null, "description": "template", "generated_timestamp": 1753089500, "keyid": "01982c46-e360-7c62-a563-9d956e31b145", "key_storage": "aW5mZWN0ZWQK", "misp_attribute_types": null, "version": 2}

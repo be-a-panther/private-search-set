@@ -6,7 +6,8 @@ import hashlib
 import base64
 #import uuid #uuidv7 since 3.14
 import uuid_utils as uuid
-from blake3 import blake3 
+from blake3 import blake3
+import hmac
 from private_search_set.bloom_filter_dcso import BloomFilterDCSO
 
 class UUIDEncoder(json.JSONEncoder):
@@ -175,6 +176,12 @@ class PrivateSearchSet:
             elif self.algorithm == 'blake3':
                 hashed_string = blake3(data,\
                         key=self._key[0:32]).hexdigest()
+            elif self.algorithm == 'hmac-sha256':
+                hashed_string = hmac.new(msg=data,\
+                        key=self._key[0:32], digestmod=hashlib.sha256).hexdigest()
+            elif self.algorithm == 'hmac-sha512':
+                hashed_string = hmac.new(msg=data,\
+                        key=self._key[0:32], digestmod=hashlib.sha512).hexdigest()
             else:
               raise ValueError("HMAC algorithm not supported.")
             return hashed_string
