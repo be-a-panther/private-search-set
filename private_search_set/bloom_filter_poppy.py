@@ -2,6 +2,7 @@ import poppy
 from private_search_set.bloom_filter_base import BloomFilterBase
 
 class BloomFilterPoppy(BloomFilterBase):
+    _formats = ['dcso-v1', 'poppy-v2']
     def __init__(self, parameters):
         super().__init__(parameters)
         if "path" in parameters.keys():
@@ -22,7 +23,7 @@ class BloomFilterPoppy(BloomFilterBase):
         try:
             self.bf = poppy.load(path)
         except:
-            raise FileError("Bloom filter read failed for: ", path)
+            raise Exception("Bloom filter read failed for: ", path)
             return False
         else:
             self.loaded = True
@@ -34,7 +35,7 @@ class BloomFilterPoppy(BloomFilterBase):
         try:
             self.bf.save(path)
         except:
-            raise FileError("Bloom filter write failed for: ", path)
+            raise Exception("Bloom filter write failed for: ", path)
             return False
         else:
             return True

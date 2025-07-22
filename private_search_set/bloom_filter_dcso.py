@@ -2,13 +2,13 @@ from flor import BloomFilter
 from private_search_set.bloom_filter_base import BloomFilterBase
 
 class BloomFilterDCSO(BloomFilterBase):
+    _formats = ["dcso-v1"]
     def __init__(self, parameters):
         super().__init__(parameters)
         self.bf = BloomFilter(n=parameters['capacity'], p=parameters['fp-probability'])
 
     def add(self, data):
         self.bf.add(data)
-        pass
 
     def check(self, data):
         return data in self.bf
@@ -19,8 +19,6 @@ class BloomFilterDCSO(BloomFilterBase):
             self.loaded = False
         else:
             self.loaded = True
-        pass
 
     def write(self, fd):
         self.bf.write(fd)
-        pass

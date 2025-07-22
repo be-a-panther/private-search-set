@@ -1,5 +1,6 @@
 import json 
 import os
+import glob
 import sys
 import time
 import hashlib
@@ -20,6 +21,7 @@ class UUIDEncoder(json.JSONEncoder):
 
 class PrivateSearchSet:
     def __init__(self, algorithm, canonicalization_format, description, generated_timestamp, keyid, misp_attribute_types, version, bloomfilter = None, filters=None, key_storage=None):
+
         self.algorithm = algorithm
         if version == 1:
             self.bloomfilter = bloomfilter
@@ -73,7 +75,9 @@ class PrivateSearchSet:
         elif private_search_set.version == 2:
           print("HexKey:", private_search_set._key.hex())
         if hasattr(private_search_set, 'key_storage'):
-            print("Key storage:", private_search_set.key_storage)
+            print("Key storage:", private_search_set.key_storage, end="")
+        if hasattr(private_search_set, '_timeseries'):
+            print("Timeseries entries", len(private_search_set._timeseries))
 
     # FYI: the key is the user provided passwort from cli
     def load_from_json_specs(json_file, key, debug):
@@ -94,13 +98,16 @@ class PrivateSearchSet:
                 PrivateSearchSet.print_private_search_set(pss)
             return pss
         else:
+
+            print(data.keys())
+            print(pss.__dict__.keys())
             raise ValueError("JSON file does not match the expected format.")
     
     def load_from_pss_home(pss_home, key, debug):
         if os.path.exists(pss_home):
             file_path = os.path.join(pss_home, 'private-search-set.json')
             if os.path.exists(file_path):
-                pss = PrivateSearchSet.load_from_json_specs(file_path, key, debug)
+                pss = PrivateSearchSet.load_from_json_specs(file_path, key, False)
             else:
                 raise ValueError("No JSON file found in the PSS home.")
         else:
@@ -108,7 +115,10 @@ class PrivateSearchSet:
         file_path = os.path.join(pss_home, 'private-search-set.bloom')
         pss.load_bf_from_file(file_path) 
         file_path = os.path.join(pss_home, 'private-search-set.pss')
-        pss._ps = pss.load_pss_from_file(file_path) 
+        pss._ps = pss.load_pss_from_file(file_path)
+        pss.load_timeseries_from_path(pss_home)
+        if debug:
+            PrivateSearchSet.print_private_search_set(pss)
         return pss
     
     def load_bf_from_file(self, file_path):
@@ -119,6 +129,14 @@ class PrivateSearchSet:
             elif self.version == 2:
                 self._bf.load(file_path)
     
+    def load_timeseries_from_path(self, path):
+        self._timeseries = []
+        if os.path.exists(path):
+            for elem in glob.glob(path + "/private-search-set_*.bloom"):
+                #elem.split("private-search-set_")[-1].split(".")[0]
+                date = os.path.splitext((os.path.split(elem)[1].split("private-search-set_")[1]))[0]
+                self._timeseries.append( (date, BloomFilterPoppy({'path' : elem})) )
+ 
     def load_pss_from_file(self, file_path):
         if os.path.exists(file_path):
             with open(file_path, 'r') as f:
@@ -129,12 +147,12 @@ class PrivateSearchSet:
     def init_filter_and_set(self):
         # init bloom filter
         if self.version == 1:
-          if self.bloomfilter['format'] == 'dcso-v1':
+          if self.bloomfilter['format'] in BloomFilterDCSO._formats:
               self._bf = BloomFilterDCSO(self.bloomfilter)
           else:
               raise ValueError("Bloomfilter format not supported.")
         elif self.version == 2:
-            if self.filters['bloomfilter']['format'] in [ 'dcso-v1', 'poppy-v2']:
+            if self.filters['bloomfilter']['format'] in BloomFilterPoppy._formats:
                 self._bf = BloomFilterPoppy(self.filters['bloomfilter'])
             else:
                 raise ValueError("Bloomfilter format not supported.")
@@ -175,11 +193,6 @@ class PrivateSearchSet:
         if self.key_storage != None:
             return self.key_storage
 
-    def ingest_stdin(self, bf, debug):
-        # Read bytes from stdin  
-        for line in sys.stdin.buffer.read().splitlines():  
-            self.ingest(line, bf, debug)
-  
     def query_generator(self, data):
         if self.version == 1:
             if self.algorithm == 'Blake2':
@@ -207,7 +220,20 @@ class PrivateSearchSet:
             return hashed_string
         return
 
-    def ingest(self, data, bf, debug):
+    def ingest_stdin(self, bf, timeseries, debug):
+        #create a new timestamp Bloom filter
+        if timeseries:
+            if not hasattr(self, '_timeseries'):
+                self._timeseries = [(int(time.time()),BloomFilterPoppy(self.filters['bloomfilter']))]
+            else:
+                self._timeseries.append((int(time.time()),BloomFilterPoppy(self.filters['bloomfilter'])))
+        # Read bytes from stdin
+        for line in sys.stdin.buffer.read().splitlines():
+            if self.canonicalization_format:
+                line = eval(str(line)+"."+self.canonicalization_format)
+            self.ingest(line, bf, timeseries, debug)
+ 
+    def ingest(self, data, bf, timeseries, debug):
         hashed_string = self.query_generator(data)
         hashed_bytes = hashed_string.encode()
 
@@ -230,29 +256,49 @@ class PrivateSearchSet:
             if notKnown:
                 self._bf.add(hashed_bytes)
         elif self.version == 2:
-            if self.filters["bloomfilter"]['format'] in [ 'dcso-v1', 'poppy-v2']:
+            if self.filters["bloomfilter"]['format'] in self._bf._formats:
                 if debug:
                     print(f"Ingesting in bloom filter:     {hashed_bytes}")
                 if notKnown:
                     self._bf.add(hashed_bytes)
+        if timeseries and self.version == 2:
+            self._timeseries[-1][1].add(hashed_bytes)
+            if debug:
+                print(f"Ingesting in timeseries:     {hashed_bytes}")
 
-    def check_stdin(self, bf, debug):
+    def check_stdin(self, bf, timeseries, debug):
         # Read bytes from stdin  
-        for line in sys.stdin.buffer.read().splitlines():  
+        for line in sys.stdin.buffer.read().splitlines():
+            if self.canonicalization_format:
+                line = eval(str(line)+"."+self.canonicalization_format)
+            resultLine = []
             # check hashset in priority
             if self._ps != None and bf == False:
                 if debug:
                     print(f"Checking against private search set: {line}")
                 if self.check_pss(line):
-                    print(line)
+                    resultLine = [line]
             elif self._bf.loaded:
                 if debug:
                     print(f"Checking against bloom filter: {line}")
                 if self.check_bf(line):
-                    print(line)
+                    resultLine = [line]
             else:
-                raise ValueError("No private search set or bloom filter loaded.")  
-    
+                raise ValueError("No private search set or bloom filter loaded.")
+            if timeseries and resultLine:
+                result = self.check_timeseries(line)
+                for elem in result:
+                    if elem is None:
+                        if debug:
+                            resultLine.append("--- --- -- --:--:-- ----")
+                    else:
+                        resultLine.append(time.asctime(time.gmtime(int(elem))))
+            if resultLine:
+                if debug:
+                    print(resultLine, sep='\t')
+                else:
+                    print(resultLine)
+ 
     def check_pss(self, data):
         hashed_string = self.query_generator(data)
         if hashed_string in self._ps:
@@ -263,15 +309,26 @@ class PrivateSearchSet:
     def check_bf(self, data):
         hashed_bytes = self.query_generator(data).encode()
         if self.version == 1:
-            if self.bloomfilter['format'] == 'dcso-v1':
+            if self.bloomfilter['format'] in BloomFilterDCSO._formats:
                 return self._bf.check(hashed_bytes)
             else:
                 raise ValueError("Bloomfilter format not supported.")
         elif self.version == 2:
-            if self.filters['bloomfilter']['format'] in ['dcso-v1', 'poppy-v2']:
+            if self.filters['bloomfilter']['format'] in BloomFilterPoppy._formats:
                 return self._bf.check(hashed_bytes)
             else:
                 raise ValueError("Bloomfilter format not supported.")
+
+    def check_timeseries(self, data):
+        hashed_bytes = self.query_generator(data).encode()
+        result = []
+        if self.version == 2 and hasattr(self, '_timeseries'):
+            for elem in self._timeseries:
+                if elem[1].check(hashed_bytes):
+                    result.append(elem[0])
+                else:
+                    result.append(None)
+        return result
  
         
     def write_to_files(self, pss_home, bfonly = False):
@@ -284,6 +341,9 @@ class PrivateSearchSet:
                 self._bf.write(f)
         elif self.version == 2:
             self._bf.write(file_path)
+            if hasattr(self, '_timeseries'):
+                file_path = os.path.join(pss_home, 'private-search-set_' + str(self._timeseries[-1][0]) + '.bloom')
+                self._timeseries[-1][1].write(file_path)
         # Write the JSON file
         file_path = os.path.join(pss_home, 'private-search-set.json')
         with open(file_path, 'w') as f:
