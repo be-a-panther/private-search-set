@@ -80,20 +80,20 @@ class PrivateSearchSet:
             print("Timeseries entries", len(private_search_set._timeseries))
 
     # FYI: the key is the user provided passwort from cli
-    def load_from_json_specs(json_file, key, debug):
+    def load_from_json_specs(json_file, userpassword, debug):
         with open(json_file) as file:
             json_data = json.load(file)
             data = {k.replace('-', '_'): v for k, v in json_data.items()}
             pss = PrivateSearchSet(**data)  # Create an instance of the PrivateSearchSet class
         if set(data.keys()) == set(pss.__dict__.keys()):
             pss.init_filter_and_set()
-            if key is None:
+            if userpassword is None:
                 if pss.version == 1:
                     pss.init_key(data['keyid'])
                 elif pss.version == 2:
                     pss.init_key(data['key_storage'])
             else:
-                pss.init_key(key)
+                pss.init_key(userpassword)
             if debug:
                 PrivateSearchSet.print_private_search_set(pss)
             return pss
@@ -103,11 +103,11 @@ class PrivateSearchSet:
             print(pss.__dict__.keys())
             raise ValueError("JSON file does not match the expected format.")
     
-    def load_from_pss_home(pss_home, key, debug):
+    def load_from_pss_home(pss_home, userpassword, debug):
         if os.path.exists(pss_home):
             file_path = os.path.join(pss_home, 'private-search-set.json')
             if os.path.exists(file_path):
-                pss = PrivateSearchSet.load_from_json_specs(file_path, key, False)
+                pss = PrivateSearchSet.load_from_json_specs(file_path, userpassword, False)
             else:
                 raise ValueError("No JSON file found in the PSS home.")
         else:
@@ -230,7 +230,7 @@ class PrivateSearchSet:
         # Read bytes from stdin
         for line in sys.stdin.buffer.read().splitlines():
             if self.canonicalization_format:
-                line = eval(str(line)+"."+self.canonicalization_format)
+                line = eval(str(line)+"."+self.canonicalization_format, {"__builtins__":None, "line": line}, {})
             self.ingest(line, bf, timeseries, debug)
  
     def ingest(self, data, bf, timeseries, debug):
@@ -270,7 +270,7 @@ class PrivateSearchSet:
         # Read bytes from stdin  
         for line in sys.stdin.buffer.read().splitlines():
             if self.canonicalization_format:
-                line = eval(str(line)+"."+self.canonicalization_format)
+                line = eval(str(line)+"."+self.canonicalization_format, {"__builtins__":None, "line": line}, {})
             resultLine = []
             # check hashset in priority
             if self._ps != None and bf == False:
