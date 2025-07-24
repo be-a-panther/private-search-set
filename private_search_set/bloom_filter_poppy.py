@@ -11,6 +11,8 @@ class BloomFilterPoppy(BloomFilterBase):
             self.bf = poppy.BloomFilter.with_version(1,parameters['capacity'], parameters['fp-probability'])
         elif parameters['format'] == 'poppy-v2':
             self.bf = poppy.BloomFilter(parameters['capacity'], parameters['fp-probability'])
+        if "matchCount" in parameters.keys():
+            self._matchCount = int(parameters['matchCount'])
 
     def add(self, data):
         return self.bf.insert_bytes(data)

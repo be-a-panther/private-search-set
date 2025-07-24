@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
 class BloomFilterBase(ABC):
+    _matchCount = 1
     @abstractmethod
     def __init__(self, parameters):
         """Initialize the Bloom filter with given parameters."""

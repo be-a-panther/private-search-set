@@ -28,9 +28,12 @@ def cli(ctx, json_file, pss_home, ingest, password, bf, timeseries, debug):
     # If a json-file with PSS metadata is provided, load the PSS from the JSON file
     # set the key if provided
     if json_file:
+        if not ingest:
+            click.echo("Using a template with checking is not possible.")
+            exit(2)
         if timeseries:
             click.echo("Using a template with timeseries is not possible.")
-            exit(2)
+            exit(3)
         try:
             ctx.obj = PrivateSearchSet.load_from_json_specs(json_file, password, debug)
         except ValueError as e:

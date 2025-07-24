@@ -10,7 +10,7 @@ Private Search Set (PSS) is an extension to [standard Bloom filter](https://gith
 
 [slides](https://raw.githubusercontent.com/hashlookup/private-search-set/main/assets/first-cti-pss-circl.pdf)
 
-## Abstract 
+## Abstract
 
 The Private Search Set (PSS) is an extension to the standard Bloom filter or a standalone hash file to describe and share private set. It provides features such as fast lookup of values without disclosing the values, easy distribution of private sets to a group of users or organizations, watermarking and tracking down potential leak of a private search set (PSS), offline private search, and flexible meta-format to describe and extend the private search set (PSS).
 
@@ -85,8 +85,11 @@ And only the `bloomfilter` format type is implemented. Within this two different
 
 #### Format type `misp-feed-cache`
 
-### Sample 
+TBD
+
+### Sample
 A non-implemented sample:
+
 ~~~~json
 {
   "algorithm": "Blake2",
@@ -117,6 +120,7 @@ A non-implemented sample:
 ~~~~
 
 A minimal version 1:
+
 ~~~~json
 {
   "algorithm": "Blake2",
@@ -135,6 +139,7 @@ A minimal version 1:
 ~~~~
 
 A minimal version 2:
+
 ~~~~json
 {
   "algorithm": "blake2b",
@@ -161,6 +166,7 @@ The feed format is composed of a directory with the following structure:
 - `private-search-set.pss` - Private search as a standalone file. `OneOfrequired`
 - `private-search-set.json` - Meta data of the private search file. `required`
 - `private-search-set.bloom` - Bloomfilter file of the pss set. `OneOfrequired`
+- `private-search-set_{epoch}.bloom` - Bloomfilter file containing ingested items of specific date. `optional`
 
 Those two files can be included in a MISP feed format export. The feed can contain a single Bloom filter set along with meta-data or a hash list file with the hash values or even both files with the meta-data.
 

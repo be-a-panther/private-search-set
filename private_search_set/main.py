@@ -34,7 +34,6 @@ class PrivateSearchSet:
         self.description = description
         if generated_timestamp is None:
             self.generated_timestamp = int(time.time())
-            print("WARN: new timestamp")
         else:
             self.generated_timestamp = int(generated_timestamp)
         if version == 1:
@@ -48,7 +47,7 @@ class PrivateSearchSet:
                 except:
                     raise ValueError("UUID not decodable: ", keyid)
             if key_storage is None:
-                self.key_storage = 'infected'
+                self.key_storage = "infected"
             else:
                 try:
                     self.key_storage = base64.b64decode(key_storage).decode()
@@ -75,11 +74,10 @@ class PrivateSearchSet:
         elif private_search_set.version == 2:
           print("HexKey:", private_search_set._key.hex())
         if hasattr(private_search_set, 'key_storage'):
-            print("Key storage:", private_search_set.key_storage, end="")
+            print("Key storage:", private_search_set.key_storage)
         if hasattr(private_search_set, '_timeseries'):
             print("Timeseries entries", len(private_search_set._timeseries))
 
-    # FYI: the key is the user provided passwort from cli
     def load_from_json_specs(json_file, userpassword, debug):
         with open(json_file) as file:
             json_data = json.load(file)
@@ -91,16 +89,16 @@ class PrivateSearchSet:
                 if pss.version == 1:
                     pss.init_key(data['keyid'])
                 elif pss.version == 2:
-                    pss.init_key(data['key_storage'])
+                    pss.init_key()
             else:
                 pss.init_key(userpassword)
+                pss.key_storage = None
             if debug:
+                if not data["generated_timestamp"]:
+                    print("WARN new timestamp generated.", file=sys.stderr)
                 PrivateSearchSet.print_private_search_set(pss)
             return pss
         else:
-
-            print(data.keys())
-            print(pss.__dict__.keys())
             raise ValueError("JSON file does not match the expected format.")
     
     def load_from_pss_home(pss_home, userpassword, debug):
@@ -176,9 +174,10 @@ class PrivateSearchSet:
             else:
                 if tmp.version == 7:
                     if key is None:
-                        password='infected'.encode()
+                        password = self.key_storage.encode()
                     else:
                         password=key.encode()
+                        #TODO decrypt
                     self.set_key(hashlib.scrypt(password=password, salt=self.keyid.node.to_bytes(16), n=2048, r=8, p=1))
                 elif tmp.version == 8:
                     self.set_key(key)
@@ -267,7 +266,9 @@ class PrivateSearchSet:
                 print(f"Ingesting in timeseries:     {hashed_bytes}")
 
     def check_stdin(self, bf, timeseries, debug):
-        # Read bytes from stdin  
+        # Read bytes from stdin
+        
+        matchCounter = 0
         for line in sys.stdin.buffer.read().splitlines():
             if self.canonicalization_format:
                 line = eval(str(line)+"."+self.canonicalization_format, {"__builtins__":None, "line": line}, {})
@@ -278,11 +279,13 @@ class PrivateSearchSet:
                     print(f"Checking against private search set: {line}")
                 if self.check_pss(line):
                     resultLine = [line]
+                    matchCounter += 1
             elif self._bf.loaded:
                 if debug:
                     print(f"Checking against bloom filter: {line}")
                 if self.check_bf(line):
                     resultLine = [line]
+                    matchCounter += 1
             else:
                 raise ValueError("No private search set or bloom filter loaded.")
             if timeseries and resultLine:
@@ -298,6 +301,8 @@ class PrivateSearchSet:
                     print(resultLine, sep='\t')
                 else:
                     print(resultLine)
+        if self._bf._matchCount != 1 and self._bf._matchCount > matchCounter:
+            print("MatchCount (", self._bf._matchCount ,") not reached!", matchCounter, file=sys.stderr)
  
     def check_pss(self, data):
         hashed_string = self.query_generator(data)
@@ -335,6 +340,7 @@ class PrivateSearchSet:
         if not os.path.exists(pss_home):
             os.makedirs(pss_home)
         # Write the bloom filter
+        PrivateSearchSet.print_private_search_set(self)
         file_path = os.path.join(pss_home, 'private-search-set.bloom')
         if self.version == 1:
             with open(file_path, 'wb') as f:
@@ -348,7 +354,7 @@ class PrivateSearchSet:
         file_path = os.path.join(pss_home, 'private-search-set.json')
         with open(file_path, 'w') as f:
             export = {k: v for k, v in self.__dict__.items() if k.startswith('_') != True}
-            if self.version == 2:
+            if self.version == 2 and export['key_storage']:
                 export['key_storage'] = base64.b64encode(self.key_storage.encode()).decode('utf-8')
             f.write(json.dumps(export, cls=UUIDEncoder))
         if not bfonly:
