@@ -47,15 +47,15 @@ flowchart TD
 
 ## Meta format
 
-|Key name|Type|Description|Required|
+|Key name|Tywpe|Description|Required|
 |:-------|:----|:---|:---:|
 |`version`|`number`|Version of the Private Search Set (PSS).|&check;|
-|`name`|`string`|A concise name used for the directory name.|&check;|
+|`name`|`string`|A concise name used for the directory name.|(&check;)|
 |`description`|`string`|Human readable description of the set.|&check;|
 |`generated-timestamp`|`number`|Generation timestamp in epoch format. |&check;|
 |`algorithm`|`string`|Keyed-hash message authentication. Available:<br/> - Blake2b<br/> - Blake3<br/> - HMAC-SHA-256<br /> - HMAC-SHA-512  |&check;|
 |`keyid`|`string`|A UUID for getting the key which is used in the keyed-hash message authentication algorithm. If the default value is used, then the pre-known key`infected` is used.<br/> - UUIDv7 as Salt<br/> - UUIDv8 for application specific keyid|&check;|
-|`filters`|`array`|An array containing the filters. Currently limit to single entry|&check;|
+|`filters`|`array`|An array containing the filters. Currently limited to single entry and only Bloom filter|&check;|
 |`misp-attribute-types`|`array`|Array of `string` with the types covered by the private search set. Types can be any from types [mentioned in the default MISP types](https://www.circl.lu/doc/misp/categories-and-types/#types). If not specified, `text` type is covered.|-|
 |`misp-object-template`|`array`|Array of `string` with the object template name and the version separated with a semicolon such as `person:19`.|-|
 |`canonicalization-format`|`string`|Meta function used expressed in Python functions. Such as `lower()[:10]`|-|
@@ -64,9 +64,12 @@ flowchart TD
 ### Meta format `filters`
 
 A list of filters types. At the moment only two types of filter are defined:
+
 - bloomfilter
 - misp-feed-cache
+
 And only the `bloomfilter` format type is implemented. Within this two different implementations are recognized, those are the `format` fields within the format type.
+
 #### Format type `bloomfilter`
 
 |Key name|Type|Description|Required|

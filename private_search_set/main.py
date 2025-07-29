@@ -3,12 +3,14 @@ import os
 import glob
 import sys
 import time
+
 import hashlib
 import base64
 #import uuid #uuidv7 since 3.14
 import uuid_utils as uuid
 from blake3 import blake3
 import hmac
+
 from private_search_set.bloom_filter_poppy import BloomFilterPoppy
 from private_search_set.bloom_filter_dcso import BloomFilterDCSO
 
@@ -19,10 +21,24 @@ class UUIDEncoder(json.JSONEncoder):
         # Let the base class default method raise the TypeError
         return json.JSONEncoder.default(self, obj)
 
-class PrivateSearchSet:
-    def __init__(self, algorithm, canonicalization_format, description, generated_timestamp, keyid, misp_attribute_types, version, bloomfilter = None, filters=None, key_storage=None):
 
-        self.algorithm = algorithm
+required = {1: {"version", "description", "generated_timestamp", "algorithm", "keyid", "bloomfilter"} , 
+            2: {"version", "description", "generated_timestamp", "algorithm", "keyid", "filters"}, 
+            "algorithm": {"blake2b", "blake3", "hmac-sha256", "hmac-sha512"}
+            }
+optional = {1 : { "misp-attribute-types", "misp-object-template", "canonicalization-format", "openpgp-encrypted-key"}, 2: { "misp-attribute-types", "misp-object-template", "canonicalization-format", "key_storage"} }
+
+class PrivateSearchSet:
+    def __init__(self, algorithm, description, generated_timestamp, keyid, version, canonicalization_format = None, misp_attribute_types= None, bloomfilter = None, filters=None, key_storage=None):
+
+        if version == 1:
+            self.algorithm = algorithm
+        elif version == 2:
+            if algorithm in required["algorithm"]:
+                self.algorithm = algorithm
+            else:
+                raise ValueError("Algorithm not usuable: ", algorithm)
+                return 
         if version == 1:
             self.bloomfilter = bloomfilter
         elif version == 2:
@@ -55,7 +71,8 @@ class PrivateSearchSet:
                     raise ValueError("Base64 not decodable: ", key_storage)
 
         self.misp_attribute_types = misp_attribute_types
-        self.version = version
+        if version == 1 or version == 2:
+           self.version = version
 
     def print_private_search_set(private_search_set):
         print("Algorithm:", private_search_set.algorithm)
@@ -83,7 +100,8 @@ class PrivateSearchSet:
             json_data = json.load(file)
             data = {k.replace('-', '_'): v for k, v in json_data.items()}
             pss = PrivateSearchSet(**data)  # Create an instance of the PrivateSearchSet class
-        if set(data.keys()) == set(pss.__dict__.keys()):
+        if required[pss.version].issubset(set(data.keys())):
+        #if set(data.keys()) == set(pss.__dict__.keys()):
             pss.init_filter_and_set()
             if userpassword is None:
                 if pss.version == 1:
@@ -106,10 +124,12 @@ class PrivateSearchSet:
             file_path = os.path.join(pss_home, 'private-search-set.json')
             if os.path.exists(file_path):
                 pss = PrivateSearchSet.load_from_json_specs(file_path, userpassword, False)
+                pss._name = os.path.basename(os.path.dirname(file_path))
             else:
                 raise ValueError("No JSON file found in the PSS home.")
         else:
             raise ValueError("PSS home does not exist.")
+
         file_path = os.path.join(pss_home, 'private-search-set.bloom')
         pss.load_bf_from_file(file_path) 
         file_path = os.path.join(pss_home, 'private-search-set.pss')
@@ -150,6 +170,11 @@ class PrivateSearchSet:
           else:
               raise ValueError("Bloomfilter format not supported.")
         elif self.version == 2:
+            if set(self.filters['bloomfilter'].keys()).issubset(BloomFilterPoppy.required):
+                pass
+            else:
+                raise ValueError("missing required parameters.")
+
             if self.filters['bloomfilter']['format'] in BloomFilterPoppy._formats:
                 self._bf = BloomFilterPoppy(self.filters['bloomfilter'])
             else:
@@ -353,7 +378,11 @@ class PrivateSearchSet:
         # Write the JSON file
         file_path = os.path.join(pss_home, 'private-search-set.json')
         with open(file_path, 'w') as f:
-            export = {k: v for k, v in self.__dict__.items() if k.startswith('_') != True}
+            #filter private variables
+            export = {k: v for k, v in self.__dict__.items() if k.startswith('_') != True and k in required[self.version]}
+            # ignore optional variables with None
+            optExport = {k: v for k, v in self.__dict__.items() if k in optional[self.version] and v != None}
+            export.update(optExport)
             if self.version == 2 and export['key_storage']:
                 export['key_storage'] = base64.b64encode(self.key_storage.encode()).decode('utf-8')
             f.write(json.dumps(export, cls=UUIDEncoder))

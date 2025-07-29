@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 
 class BloomFilterBase(ABC):
+    required = {"capacity", "fp-probability" , "format"}
+    optional = {"matchCount"}
     _matchCount = 1
     @abstractmethod
     def __init__(self, parameters):

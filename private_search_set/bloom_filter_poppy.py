@@ -1,5 +1,5 @@
 import poppy
-from private_search_set.bloom_filter_base import BloomFilterBase
+from private_search_set.filter_base import BloomFilterBase
 
 class BloomFilterPoppy(BloomFilterBase):
     _formats = ['dcso-v1', 'poppy-v2']
@@ -25,6 +25,7 @@ class BloomFilterPoppy(BloomFilterBase):
         try:
             self.bf = poppy.load(path)
         except:
+            self.loaded = False
             raise Exception("Bloom filter read failed for: ", path)
             return False
         else:

@@ -1,5 +1,5 @@
 from flor import BloomFilter
-from private_search_set.bloom_filter_base import BloomFilterBase
+from private_search_set.filter_base import BloomFilterBase
 
 class BloomFilterDCSO(BloomFilterBase):
     _formats = ["dcso-v1"]
