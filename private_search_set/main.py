@@ -148,12 +148,14 @@ class PrivateSearchSet:
                 self._bf.load(file_path)
     
     def load_timeseries_from_path(self, path):
-        self._timeseries = []
         if os.path.exists(path):
+            self._timeseries = []
             for elem in glob.glob(path + "/private-search-set_*.bloom"):
                 #elem.split("private-search-set_")[-1].split(".")[0]
                 date = os.path.splitext((os.path.split(elem)[1].split("private-search-set_")[1]))[0]
                 self._timeseries.append( (date, BloomFilterPoppy({'path' : elem})) )
+            if len(self._timeseries) == 0:
+                del(self._timeseries)
  
     def load_pss_from_file(self, file_path):
         if os.path.exists(file_path):
@@ -199,7 +201,11 @@ class PrivateSearchSet:
             else:
                 if tmp.version == 7:
                     if key is None:
-                        password = self.key_storage.encode()
+                        if self.key_storage:
+                            password = self.key_storage.encode()
+                        else:
+                            #raise Exception("Missing key material")
+                            sys.exit("Missing key material")
                     else:
                         password=key.encode()
                         #TODO decrypt
@@ -383,7 +389,7 @@ class PrivateSearchSet:
             # ignore optional variables with None
             optExport = {k: v for k, v in self.__dict__.items() if k in optional[self.version] and v != None}
             export.update(optExport)
-            if self.version == 2 and export['key_storage']:
+            if self.version == 2 and 'key_storage' in export:
                 export['key_storage'] = base64.b64encode(self.key_storage.encode()).decode('utf-8')
             f.write(json.dumps(export, cls=UUIDEncoder))
         if not bfonly:
